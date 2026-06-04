@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  body { @apply bg-[#F9F9F7] text-[#111111] font-sans antialiased; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #F5F5F3; }
+  ::-webkit-scrollbar-thumb { background: #D5D5D0; border-radius: 2px; }
+}
+@keyframes floatY {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideFromLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideFromRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+@keyframes spinSlowRev { to { transform: rotate(-360deg); } }
+@keyframes vsScale {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.07); }
+}
+.arg-enter       { animation: fadeUp 0.3s ease-out forwards; }
+.arg-from-left   { animation: slideFromLeft 0.3s ease-out forwards; }
+.arg-from-right  { animation: slideFromRight 0.3s ease-out forwards; }
+.float-anim      { animation: floatY 3s ease-in-out infinite; }
+.spin-slow       { animation: spinSlow 12s linear infinite; }
+.spin-slow-rev   { animation: spinSlowRev 8s linear infinite; }
+.vs-scale        { animation: vsScale 2s ease-in-out infinite; }
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer-bg {
+  background: linear-gradient(90deg, #f0f0ee 25%, #e8e8e6 50%, #f0f0ee 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.breathe { animation: breathe 2.5s ease-in-out infinite; }
+@keyframes borderPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.border-pulse { animation: borderPulse 2s ease-in-out infinite; }
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal-up { animation: revealUp 0.5s ease-out forwards; }
