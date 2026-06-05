@@ -1,4 +1,5 @@
 import json
+import os
 from langchain_ollama import OllamaLLM
 from backend.utils import (
     PERSONALITY_QUESTIONS,
@@ -6,7 +7,8 @@ from backend.utils import (
     build_persona_response_prompt,
 )
 
-llm = OllamaLLM(model="phi", base_url="http://ollama:11434")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+llm = OllamaLLM(model="phi", base_url=OLLAMA_HOST)
 
 
 def run_personality_quiz(persona_name: str) -> dict:

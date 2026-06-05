@@ -160,7 +160,7 @@ export default function HomePage() {
             <div className="relative z-[1]">
               <h2 className="font-title font-bold text-2xl tracking-wide text-parchment mb-1">Summon a defendant</h2>
               <p className="text-sm text-[#cbb990] italic mb-4">
-                The court will pull their record from Wikipedia and build a case file.
+                The court will pull their record from different sources and build a case file.
               </p>
               <input
                 autoFocus

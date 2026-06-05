@@ -4,9 +4,11 @@ import type {
   StartDebateResponse, ArgueResponse, ObjectionResponse,
 } from '../types'
 
-// In the browser, the API is always reachable on the host at port 8001.
-// (Frontend is served on :5176, backend on :8001.)
-const apiBaseURL = `${window.location.protocol}//${window.location.hostname}:8001`
+// API port is baked at build time (VITE_API_PORT, from docker-compose / .env),
+// defaulting to 8001. The host stays dynamic so it works on localhost and on a
+// remote host alike.
+const apiPort = import.meta.env.VITE_API_PORT || '8001'
+const apiBaseURL = `${window.location.protocol}//${window.location.hostname}:${apiPort}`
 
 const api = axios.create({ baseURL: apiBaseURL, timeout: 15000 })
 const apiLong = axios.create({ baseURL: apiBaseURL, timeout: 210000 })
@@ -27,10 +29,9 @@ export async function loadPersonas(): Promise<Persona[]> {
 
 export async function createPersona(
   name: string,
-  maxReferences = 20,
 ): Promise<CreatePersonaResponse> {
   const { data } = await api.post<CreatePersonaResponse>('/create_persona', null, {
-    params: { persona_name: name, max_references: maxReferences },
+    params: { persona_name: name },
   })
   return data
 }

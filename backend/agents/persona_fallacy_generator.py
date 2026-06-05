@@ -2,9 +2,10 @@
 Generate personalized fallacious arguments based on persona traits.
 """
 
+import os
 from langchain_ollama import OllamaLLM
 
-llm = OllamaLLM(model="phi", base_url="http://ollama:11434")
+llm = OllamaLLM(model="phi", base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"))
 
 
 def generate_fallacy_for_persona(persona_name: str, traits: dict | None) -> dict:

@@ -11,7 +11,6 @@ class Persona(SQLModel, table=True):
     loaded: bool = Field(default=False)
     failed: bool = Field(default=False)
     error_message: Optional[str] = Field(default=None, nullable=True)
-    max_references: int = Field(default=20)
     traits: Optional[str] = Field(default=None, nullable=True)
 
 

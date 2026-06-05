@@ -12,6 +12,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Host port the API is published on (passed from docker-compose, baked at build)
+ARG VITE_API_PORT=8001
+ENV VITE_API_PORT=$VITE_API_PORT
+
 # Build production bundle
 RUN npm run build
 

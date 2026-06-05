@@ -1,5 +1,9 @@
 import base64
+import threading
+import time
 from contextlib import asynccontextmanager
+
+import ollama
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -15,18 +19,46 @@ from backend.worker.tasks import build_persona
 from backend.agents.debate_agent import run_personality_quiz, generate_persona_response_to_user
 from backend.agents.objection_evaluator import evaluate_objection
 from backend.agents.persona_fallacy_generator import generate_fallacy_for_persona
+from backend.utils import QDRANT_COLLECTION
 
 qdrant = QdrantClient(host="qdrant", port=6333)
+
+# Models required from the host's Ollama. Pulled automatically on startup so the
+# user only needs Ollama installed — no manual `ollama pull`.
+REQUIRED_MODELS = ["phi", "nomic-embed-text"]
+_models_ready = False
+
+
+def _ensure_models() -> None:
+    """Pull required models into the host Ollama, retrying until reachable.
+
+    Runs in a background thread so the API starts immediately; /health reports
+    readiness. `ollama.pull` is idempotent — already-present models return fast.
+    """
+    global _models_ready
+    while not _models_ready:
+        try:
+            for model in REQUIRED_MODELS:
+                ollama.pull(model)
+            _models_ready = True
+            print("[startup] Ollama models ready")
+        except Exception as exc:
+            print(f"[startup] waiting for Ollama / pulling models: {exc}")
+            time.sleep(5)
 
 
 @asynccontextmanager
 async def lifespan_handler(app: FastAPI):
     await init_db()
-    if not qdrant.collection_exists("personas"):
+    # Same collection constant used by utils.py for upsert/search,
+    # so the two can never drift apart.
+    if not qdrant.collection_exists(QDRANT_COLLECTION):
         qdrant.create_collection(
-            collection_name="personas",
+            collection_name=QDRANT_COLLECTION,
             vectors_config=VectorParams(size=768, distance=Distance.COSINE),
         )
+    # Kick off model download in the background (non-blocking).
+    threading.Thread(target=_ensure_models, daemon=True).start()
     yield
 
 
@@ -52,7 +84,6 @@ app.add_middleware(
 async def create_persona_and_embedding(
     persona_name: str,
     service: PersonaServiceDep,
-    max_references: int = 20,
 ):
     possible_options = (
         show_possible_options_of_personas_based_on_a_commom_name_or_description(
@@ -68,15 +99,11 @@ async def create_persona_and_embedding(
             "options": possible_options,
         }
 
-    new_persona = await service.add(
-        persona_name,
-        max_references=max_references,
-    )
+    new_persona = await service.add(persona_name)
 
     task = build_persona.delay(
         persona_id=str(new_persona.id),
         persona_name=new_persona.name,
-        max_references=max_references,
     )
 
     return {
@@ -90,13 +117,11 @@ async def create_persona_and_embedding(
 
 @app.get("/health")
 async def health_check():
-    """Check if all required services are ready"""
-    # Simple health check - if this endpoint responds, we're ready
-    # Ollama models are loaded asynchronously in the entrypoint
+    """Report readiness — true once the Ollama models have been pulled."""
     return {
-        "status": "ready",
-        "message": "All systems ready",
-        "ready": True,
+        "status": "ready" if _models_ready else "initializing",
+        "message": "All systems ready" if _models_ready else "Downloading AI models…",
+        "ready": _models_ready,
     }
 
 

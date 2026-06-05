@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import ollama
 import requests
-from bs4 import BeautifulSoup
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct
 
@@ -30,6 +29,11 @@ def chunk_text(text: str, size: int = 3000, overlap: int = 300) -> list[str]:
 
     if not text:
         return []
+
+    # A short source (already validated as meaningful by its resolver) is kept
+    # whole, instead of being discarded by the long-document fragment filter.
+    if len(text) <= size:
+        return [text]
 
     chunks = []
     start = 0
@@ -115,32 +119,6 @@ def get_wiki_image(persona_name: str) -> bytes | None:
         image_response.raise_for_status()
 
         return image_response.content
-
-    except requests.RequestException:
-        return None
-
-
-def fetch_reference_text(url: str) -> str | None:
-    try:
-        response = requests.get(
-            url,
-            timeout=10,
-            headers=HEADERS,
-        )
-
-        if response.status_code >= 400:
-            return None
-
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        for tag in soup(
-            ["script", "style", "noscript", "svg", "header", "footer", "nav"]
-        ):
-            tag.decompose()
-
-        text = clean_text(soup.get_text(separator=" ", strip=True))
-
-        return text if len(text) >= 500 else None
 
     except requests.RequestException:
         return None
