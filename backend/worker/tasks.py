@@ -16,7 +16,7 @@ from backend.worker.celery import celery_app
 
 def get_sync_engine():
     url = (
-        os.getenv("DATABASE_URL", "sqlite:///./argumentai.db")
+        os.getenv("DATABASE_URL", "sqlite:///./thecourtroom.db")
         .replace("sqlite+aiosqlite", "sqlite")
         .replace("+asyncpg", "")
     )

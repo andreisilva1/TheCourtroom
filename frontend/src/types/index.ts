@@ -1,61 +1,10 @@
 export interface Persona {
   id: string
   name: string
-  description: string
-  image?: string
-  image_url?: string
-  indexed: boolean
+  image?: string | null
+  image_url?: string | null
   loaded?: boolean
-  max_references?: number
-  battles?: number
-  wins?: number
-  category?: string
-  style?: string
   color?: string
-}
-
-export interface Argument {
-  speaker_id: string
-  content: string
-  turn: number
-  confidence?: number
-  impact?: number
-  retrieved_context?: string[]
-  rhetorical_style?: string
-}
-
-export interface BattleState {
-  battle_id: string
-  persona_a: Persona
-  persona_b: Persona
-  topic: string
-  mode: DebateMode
-  arguments: Argument[]
-  active_speaker: string
-  status: 'active' | 'ended'
-  round: number
-}
-
-export type DebateMode = 'SERIOUS' | 'CHAOTIC' | 'ACADEMIC' | 'STREET_FIGHT' | 'COURTROOM' | 'PODCAST'
-
-export interface LoadPersonasResponse {
-  personas: Persona[]
-}
-
-export interface ArgueResponse {
-  battle_id: string
-  starts_with: string
-  message: Argument
-}
-
-export interface TurnResponse {
-  speaker_id: string
-  content: string
-  turn: number
-  confidence?: number
-  impact?: number
-  retrieved_context?: string[]
-  rhetorical_style?: string
 }
 
 export interface PersonaOption {
@@ -63,11 +12,13 @@ export interface PersonaOption {
   description: string
 }
 
-export interface CreatePersonaTaskResponse {
-  task_id: string
-  persona_id: string
-  persona_name: string
-  max_references: number
+export interface CreatePersonaResponse {
+  needs_selection: boolean
+  options?: PersonaOption[]
+  task_id?: string
+  persona_id?: string
+  persona_name?: string
+  status?: string
 }
 
 export interface TaskStatus {
@@ -75,16 +26,35 @@ export interface TaskStatus {
   current?: number
   total?: number
   persona_id?: string
-  persona_name?: string
 }
 
-export interface ActivityItem {
-  id: string
-  persona_a: string
-  persona_b: string
-  topic: string
-  result: string
-  winner?: string
-  time: string
-  rounds: number
+export interface StartDebateResponse {
+  debate_id?: string
+  persona_name?: string
+  persona_id?: string
+  theme?: string
+  fallacy_type?: string
+  opening?: string
+  error?: string
+  status?: string
+}
+
+export interface ArgueResponse {
+  debate_id?: string
+  message_count?: number
+  can_object?: boolean
+  auto_objection_triggered?: boolean
+  persona_response?: string
+  persona_name?: string
+  error?: string
+}
+
+export interface ObjectionResponse {
+  debate_id?: string
+  won?: boolean
+  reason?: string
+  example_refutation?: string
+  fallacy_theme?: string
+  fallacy_type?: string
+  error?: string
 }

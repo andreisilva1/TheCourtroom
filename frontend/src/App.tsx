@@ -1,32 +1,10 @@
-import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import HomePage from './pages/HomePage'
-import StartConfrontationPage from './pages/StartConfrontationPage'
-import DebateArenaPage from './pages/DebateArenaPage'
-import PersonasPage from './pages/PersonasPage'
-
-function Root() {
-  return (
-    <div className="flex h-screen overflow-hidden bg-[#F9F9F7] font-sans">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <Outlet />
-      </main>
-    </div>
-  )
-}
+import AceAttorneyArena from './pages/AceAttorneyArena'
 
 const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Root />,
-    children: [
-      { index: true, element: <HomePage /> },
-      { path: 'confront', element: <StartConfrontationPage /> },
-      { path: 'arena', element: <DebateArenaPage /> },
-      { path: 'personas', element: <PersonasPage /> },
-    ],
-  },
+  { path: '/', element: <HomePage /> },
+  { path: '/ace-attorney/:persona_id', element: <AceAttorneyArena /> },
 ])
 
 export default function App() {

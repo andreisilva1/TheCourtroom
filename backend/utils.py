@@ -13,7 +13,7 @@ from qdrant_client.models import PointStruct
 QDRANT_COLLECTION = "persona_chunks"
 EMBED_MODEL = "nomic-embed-text"
 
-HEADERS = {"User-Agent": "PersonaBattle/1.0 (local-ai-project)"}
+HEADERS = {"User-Agent": "TheCourtroom/1.0 (local-ai-project)"}
 
 qdrant = QdrantClient(
     host=os.getenv("QDRANT_HOST", "qdrant"),
@@ -213,7 +213,7 @@ PERSONALITY_QUESTIONS = [
 
 def get_persona_embeddings(
     persona_id: str,
-    personality_scores: dict[str, float],
+    traits: dict[str, float],
     topic: str,
     limit: int = 3,
 ) -> list[str]:
@@ -228,7 +228,7 @@ def get_persona_embeddings(
 
     # Build query based on dominant traits + topic
     keywords = []
-    for trait_id, score in personality_scores.items():
+    for trait_id, score in traits.items():
         if score > 0.6 and trait_id in trait_keywords:
             keywords.append(trait_keywords[trait_id])
 
@@ -241,7 +241,7 @@ def get_persona_embeddings(
 
 def build_persona_response_prompt(
     persona_name: str,
-    personality_scores: dict[str, float],
+    traits: dict[str, float],
     context_chunks: list[str],
     fallacy_theme: str,
     user_argument: str,
@@ -249,9 +249,9 @@ def build_persona_response_prompt(
     """Build prompt for persona to defend their fallacious position with personality and context."""
 
     # Determine personality traits
-    rational_score = personality_scores.get("rational", 0.5)
-    aggressive_score = personality_scores.get("aggressive", 0.5)
-    optimistic_score = personality_scores.get("optimistic", 0.5)
+    rational_score = traits.get("rational", 0.5)
+    aggressive_score = traits.get("aggressive", 0.5)
+    optimistic_score = traits.get("optimistic", 0.5)
 
     # Build persona style
     style = []

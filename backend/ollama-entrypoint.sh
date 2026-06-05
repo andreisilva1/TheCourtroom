@@ -1,29 +1,29 @@
 #!/bin/bash
-set -e
 
-# Inicia Ollama em background
+# Start Ollama in background
 ollama serve &
 OLLAMA_PID=$!
 
-# Aguarda Ollama ficar pronto
-echo "Aguardando Ollama iniciar..."
-for i in {1..30}; do
+# Wait for Ollama to be ready (max 10 seconds)
+echo "Waiting for Ollama to start..."
+for i in {1..10}; do
   if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
-    echo "✓ Ollama pronto"
+    echo "Ollama ready"
     break
   fi
-  echo "  Tentativa $i/30..."
-  sleep 2
+  sleep 1
 done
 
-# Pull the required models
-echo "Downloading nomic-embed-text for embeddings..."
-ollama pull nomic-embed-text
+# Download models asynchronously
+echo "Starting model downloads..."
+(
+  sleep 2
+  echo "Downloading nomic-embed-text..."
+  ollama pull nomic-embed-text > /dev/null 2>&1
+  echo "Downloading phi..."
+  ollama pull phi > /dev/null 2>&1
+  echo "Models ready"
+) &
 
-echo "Downloading phi for debates..."
-ollama pull phi
-
-echo "✓ All models ready!"
-
-# Mantém o processo rodando
+# Keep main process running
 wait $OLLAMA_PID

@@ -1,12 +1,27 @@
-# ArgumentAI ⚖️
+# The Courtroom ⚖️
 
-**An Agentic AI Debate Platform** where users challenge AI personas on fallacious arguments using semantic search, RAG, and LLM-powered reasoning.
+**Argue your case against the machine.** A courtroom-style debate game where an
+AI persona takes a controversial (and quietly fallacious) stance, and *you* — the
+prosecutor — must dismantle it before time runs out. Built on RAG, an LLM jury,
+and dynamically generated personas scraped from Wikipedia.
 
-## 🎯 Overview
+> Inspired by the drama of Ace Attorney: the persona is the **defendant**, you are
+> the **prosecutor**, and an LLM is the **judge** who decides whether your
+> objection holds.
 
-ArgumentAI is a full-stack application that generates dynamic AI personas from Wikipedia, Wikidata and DBPedia data and engages users in structured debates. The system identifies fallacious arguments, evaluates user refutations, and delivers real-time feedback through an intuitive Ace Attorney-style interface.
+---
 
-**Core Mechanic**: User vs. AI persona debate where the AI proposes a fallacy, the user argues against it, and the LLM judge evaluates who wins.
+## 🎯 The core loop
+
+1. **Summon a defendant** — type a name, and a persona is built from Wikipedia
+   (text + references → embeddings in Qdrant).
+2. **Open the trial** — the persona answers a personality quiz, then states a
+   hot take rooted in a hidden logical fallacy.
+3. **Argue** — you present arguments; the persona defends its position using
+   **RAG (its own knowledge)** + **its personality traits**.
+4. **OBJECTION!** — once you've made enough arguments, slam the objection button.
+   An LLM jury rules **CASE WON** or **NOT PROVEN**, and reveals the fallacy plus
+   a model refutation.
 
 ---
 
@@ -14,338 +29,152 @@ ArgumentAI is a full-stack application that generates dynamic AI personas from W
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (React 19)                      │
-│  TypeScript + Vite + Tailwind | Real-time State Management  │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ HTTP/JSON
-┌──────────────────────▼──────────────────────────────────────┐
-│              Backend (FastAPI + SQLModel)                    │
-│  ├─ /ace-attorney/start (RAG-powered persona generation)    │
-│  ├─ /ace-attorney/argue (LLM debate turn processing)        │
-│  ├─ /ace-attorney/objection (Fallacy evaluation agent)      │
-│  └─ /create_persona (Async Wikipedia data pipeline)         │
+│                  Frontend (React 19 + Vite)                  │
+│   Courtroom UI · TypeScript · Tailwind · health-gated grid  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ HTTP/JSON (:8001)
+┌──────────────────────────▼──────────────────────────────────┐
+│                  Backend (FastAPI + SQLModel)                │
+│  /create_persona        → async Wikipedia → Qdrant pipeline  │
+│  /ace-attorney/start    → personality quiz + fallacy gen     │
+│  /ace-attorney/argue    → RAG + traits → persona rebuttal    │
+│  /ace-attorney/objection→ LLM jury verdict                   │
 └──────────────┬────────────────┬────────────────┬────────────┘
                │                │                │
-        ┌──────▼────────┐  ┌────▼──────┐  ┌─────▼─────┐
-        │   Qdrant      │  │   Redis   │  │  Celery   │
-        │ (Vector DB)   │  │  (Cache)  │  │ (Workers) │
-        └──────┬────────┘  └───────────┘  └─────┬─────┘
-               │                                 │
+        ┌──────▼──────┐  ┌──────▼─────┐  ┌───────▼──────┐
+        │   Qdrant    │  │   Redis    │  │    Celery    │
+        │ (vectors)   │  │  (broker)  │  │  (workers)   │
+        └──────┬──────┘  └────────────┘  └───────┬──────┘
+               │                                  │
         ┌──────▼──────────────────────────────────▼─────┐
-        │         Ollama (LLM Inference Engine)         │
-        │  ├─ phi-3 (Debate reasoning & evaluation)     │
-        │  └─ nomic-embed-text (Semantic embeddings)    │
-        └─────────────────────────────────────────────┘
+        │            Ollama (local LLM engine)          │
+        │  ├─ phi              (debate + jury reasoning) │
+        │  └─ nomic-embed-text (768-dim embeddings)     │
+        └───────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick start
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 18+ (for local frontend dev)
-- Python 3.10+ (for local backend dev)
-
-### Installation
+Everything runs in Docker — including Ollama and the model downloads. No local
+Ollama required.
 
 ```bash
-# Clone repository
-git clone https://github.com/andreisilva1/ArgumentAI.git
-cd ArgumentAI
+docker compose up -d
 
-# Start all services
-docker-compose up -d
-
-# Wait for Ollama to initialize (check logs)
-docker logs argumentai-ollama-1
-
-# Frontend available at: http://localhost:5176
-# Backend API at: http://localhost:8001
+# Frontend → http://localhost:5176
+# API      → http://localhost:8001  (Swagger at /docs)
+# Qdrant   → http://localhost:6333
 ```
 
-### Development (Local)
+On first boot, the `the-courtroom-ollama-1` container pulls `phi` and
+`nomic-embed-text` **in the background**. The frontend polls `/health` and keeps
+defendants locked (dimmed) until inference is ready — watch progress with:
 
 ```bash
-# Backend
-cd backend
-pip install -e .
-uvicorn main:app --reload --port 8001
-
-# Frontend (new terminal)
-cd frontend
-npm install
-npm run dev
+docker compose logs -f ollama
 ```
 
 ---
 
-## 🤖 AI/ML Components
+## 🤖 Where the RAG actually lives
 
-### Retrieval-Augmented Generation (RAG)
+**Ingestion (building a persona)** — `backend/worker/tasks.py` + `backend/utils.py`
+1. `wikipedia_resolver` fetches the page text + external references
+2. `chunk_text` segments it; `nomic-embed-text` embeds each chunk
+3. chunks land in Qdrant, filtered per `persona_id`
 
-**Persona Generation Pipeline:**
-1. **Data Ingestion**: Wikipedia API + Wikidata + DBPedia scraping
-2. **Chunking & Embedding**: Text segmentation with nomic-embed-text embeddings
-3. **Vector Storage**: Qdrant collection per persona for semantic search
-4. **Augmented Generation**: LLM prompts enriched with retrieved persona knowledge
+**Generation (persona's rebuttal)** — `backend/agents/debate_agent.py` + `utils.py`
+1. `get_persona_embeddings` queries Qdrant using the persona's dominant **traits**
+   + the fallacy theme
+2. `build_persona_response_prompt` fuses retrieved context + traits + your argument
+3. `phi` generates an in-character defense
 
-```python
-# Example RAG flow
-retrieved_docs = qdrant.search(query_embedding, top_k=3)
-augmented_prompt = f"Context: {retrieved_docs}\n\nGenerate persona response..."
-response = llm.invoke(augmented_prompt)
-```
-
-### Agentic AI Workflows
-
-**Ace Attorney Debate Loop:**
-```
-User vs Persona: User Input → Argument Processing → LLM Evaluation → Persona Response
-                      ↓              ↓                     ↓                ↓
-                 (user types)  (semantics match)  (fallacy detection)  (persona defends)
-```
-
-**Objection Evaluation Agent:**
-- Receives: fallacy_theme, fallacy_hidden_flaw, user_arguments (accumulated)
-- Returns: {won: bool, reason: str, example_refutation: str}
-- Uses chain-of-thought prompting for logical reasoning
-- Determines if user successfully refuted the persona's fallacious argument
-
-### Embeddings & Semantic Search
-
-- **Embedding Model**: nomic-embed-text (768-dim vectors)
-- **Vector Database**: Qdrant with cosine similarity
-- **Use Cases**:
-  - Persona knowledge retrieval
-  - Argument semantic matching
-  - Fallacy pattern detection
+The personality system (a 14-question quiz → trait scores `0.0–1.0`) is what
+makes each persona argue differently — that difference is now aimed **at you**.
 
 ---
 
-## 📋 Features
-
-### ✅ Implemented
-
-- **Dynamic Persona Generation**
-  - Auto-scrape Wikipedia/Wikidata/DBPedia
-  - Personality quiz (14 questions) → trait scoring (0.0-1.0)
-  - LLM-generated hot take fallacies per persona
-
-- **Ace Attorney Debate Mode**
-  - VS-style intro animation (~3 sec) before persona's opening statement
-  - Real-time typing indicators during argument processing
-  - Message counter (0-10 user arguments)
-  - OBJECTION! button (manual at msg 3+, auto at msg 10)
-
-- **Fallacy Evaluation**
-  - LLM judge determines if user refuted the argument
-  - Returns explanation + example alternative refutation
-  - Persistent debate history with transcripts
-
-- **UI/UX Polish**
-  - Glow pulse effect on active speaker
-  - Dark theme with accent red (#E8001A) and blue
-  - Responsive design with Vite dev server + production build
-
-### 🔄 Distributed Processing
-
-- **Async Backend**: FastAPI with asyncio, 100+ concurrent requests
-- **Task Queue**: Celery + Redis for long-running persona generation
-- **Non-blocking I/O**: aiosqlite for database operations
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS |
-| **Backend** | FastAPI, SQLModel, async Python |
-| **Database** | SQLite (SQLModel), Qdrant (vectors) |
-| **Cache/Queue** | Redis, Celery |
-| **LLM** | Ollama (phi-3 + nomic-embed-text) |
-| **Containerization** | Docker, Docker Compose |
-| **API** | REST, JSON |
-
----
-
-## 📁 Project Structure
+## 🔌 API endpoints
 
 ```
-ArgumentAI/
+POST  /create_persona?persona_name=X     # kick off async build (Celery)
+GET   /load_personas                     # list personas (+ loaded flag)
+GET   /task/{task_id}                     # build task status
+GET   /health                            # readiness probe
+
+POST  /ace-attorney/start                # quiz + fallacy + new debate
+POST  /ace-attorney/argue                # your argument → persona rebuttal
+POST  /ace-attorney/objection            # jury verdict on your objection
+
+GET   /debates/{debate_id}/details       # full transcript + result
+```
+
+---
+
+## 📁 Project structure
+
+```
+the-courtroom/
 ├── backend/
-│   ├── agents/                 # AI agent implementations
-│   │   ├── persona_fallacy_generator.py   # LLM-powered fallacy generation for personas
-│   │   ├── objection_evaluator.py          # LLM-powered fallacy refutation evaluation
-│   │   ├── debate_agent.py                 # Personality quiz + debate response generation
-│   │   └── fallacies_database.py           # Pre-written fallacy database (legacy)
+│   ├── agents/
+│   │   ├── persona_fallacy_generator.py   # persona's hot take (fallacy)
+│   │   ├── debate_agent.py                # personality quiz + RAG rebuttal
+│   │   └── objection_evaluator.py         # LLM jury verdict
 │   ├── database/
-│   │   ├── models.py          # SQLModel schemas (Persona, Debate)
-│   │   └── session.py         # Async SQLAlchemy session factory
+│   │   ├── models.py                      # Persona, Debate (SQLModel)
+│   │   └── session.py                     # async session factory
 │   ├── services/
-│   │   └── debate_service.py  # Debate CRUD + message management
+│   │   ├── persona_service.py             # persona CRUD
+│   │   └── debate_service.py              # debate + traits persistence
 │   ├── worker/
-│   │   ├── tasks.py           # Celery tasks (persona generation)
-│   │   └── celery.py          # Celery app config
-│   ├── pipeline.py            # Wikipedia data fetching
-│   ├── utils.py               # Embedding + vector storage
-│   ├── main.py                # FastAPI app + all endpoints
-│   ├── requirements.txt        # Python dependencies
-│   └── Dockerfile             # Container image
+│   │   ├── tasks.py                       # Celery persona build pipeline
+│   │   └── celery.py                      # Celery app
+│   ├── pipeline.py                        # Wikipedia scraping
+│   ├── utils.py                           # embeddings, Qdrant, RAG helpers
+│   └── main.py                            # FastAPI app + endpoints
 │
 ├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── HomePage.tsx             # Persona selection + history
-│   │   │   ├── AceAttorneyArena.tsx     # Main debate interface
-│   │   │   └── DebateDetails.tsx        # Debate transcript viewer
-│   │   ├── components/
-│   │   │   ├── PersonaCard.tsx          # Persona grid item
-│   │   │   ├── PersonaAvatar.tsx        # Avatar image renderer
-│   │   │   └── CreatePersonaModal.tsx   # Persona creation form
-│   │   ├── api/
-│   │   │   └── client.ts                # Axios instance + API calls
-│   │   ├── types/
-│   │   │   └── index.ts                 # TypeScript interfaces
-│   │   ├── App.tsx                      # Router setup
-│   │   └── main.tsx                     # Entry point
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   ├── package.json
-│   └── Dockerfile
+│   └── src/
+│       ├── pages/
+│       │   ├── HomePage.tsx               # courtroom grid + summon modal
+│       │   └── AceAttorneyArena.tsx       # VS intro → trial → verdict
+│       ├── components/
+│       │   ├── PersonaCard.tsx            # "case file" card
+│       │   └── PersonaAvatar.tsx          # portrait / initials
+│       ├── api/client.ts                  # typed API client
+│       └── types/index.ts                 # shared interfaces
 │
-├── docker-compose.yml          # Service orchestration
+├── docker-compose.yml                     # project name: the-courtroom
+├── design-mock.html                       # standalone design preview
+├── LICENSE                                # CC BY-NC 4.0
 └── README.md
 ```
 
 ---
 
-## 🔌 API Endpoints
+## 🛠️ Tech stack
 
-### Persona Management
-```
-POST   /create_persona?persona_name=X        # Async creation task
-GET    /load_personas                        # List all personas
-GET    /task/{task_id}                       # Celery task status
-```
-
-### Ace Attorney Debate
-```
-POST   /ace-attorney/start                   # Initialize debate (RAG + LLM)
-POST   /ace-attorney/argue                   # User argument + persona response
-POST   /ace-attorney/objection               # Evaluate user refutation
-```
-
-### History & Analytics
-```
-GET    /debates/history                      # All debate summaries
-GET    /debates/{debate_id}/details          # Full transcript + evaluation
-```
-
----
-
-## 🎮 Usage Flow
-
-### 1. Create Persona
-```
-User → "Create Persona" modal → Backend validates Wikipedia exists → 
-Celery task extracts data → Embeddings stored in Qdrant → 
-Persona appears in grid
-```
-
-### 2. Start Debate
-```
-User clicks "Challenge" → Frontend navigates with loading state → 
-Backend calls /ace-attorney/start (generates fallacy) → 
-Frontend displays VS-style intro animation (~3 sec) → 
-Shows persona's opening fallacy → Debate begins
-```
-
-### 3. Argue & Evaluate
-```
-User types argument → Sent to /ace-attorney/argue → 
-Persona response generated (with typing animation) → 
-Message counter increments → At msg 3+, OBJECTION! button enabled
-```
-
-### 4. Objection & Verdict
-```
-User clicks OBJECTION! → Sends all arguments to /ace-attorney/objection → 
-LLM evaluates refutation quality → 
-Result screen shows WIN (green) or LOSS (red) with example refutation
-```
-
----
-
-## 🐛 Known Issues & TODOs
-
-- [ ] Improve LLM fallacy generation for edge cases (currently falls back to generic)
-- [ ] Add debate timeout (currently open-ended)
-- [ ] Implement persona-specific debate responses (currently generic response)
-- [ ] Implement leaderboard/statistics dashboard
-- [ ] Support multi-language personas
-- [ ] Add debate export (PDF/JSON)
-- [ ] Optimize Qdrant queries for large document sets
-
----
-
-## 🤝 Contributing
-
-```bash
-# Create feature branch
-git checkout -b feature/your-feature
-
-# Make changes, commit with clear messages
-git commit -m "feat: add debunking score tracking"
-
-# Submit PR with description
-git push origin feature/your-feature
-```
-
-**Code Standards:**
-- Backend: Black formatting, type hints required
-- Frontend: ESLint + Prettier, TypeScript strict mode
-- Tests: pytest for backend, Vitest for frontend (TBD)
-
----
-
-## 📊 Performance Metrics
-
-- **Persona Generation**: ~45-60 sec (Wikipedia scrape + embedding + Qdrant indexing)
-- **Debate Initialization**: ~2-5 sec (RAG retrieval + LLM fallacy generation)
-- **Argument Processing**: ~500ms-2s (LLM inference + response generation)
-- **Objection Evaluation**: ~3-8 sec (LLM reasoning + judgment)
-- **Concurrent Users**: 100+ (async FastAPI + Celery workers)
+| Layer            | Tech                                          |
+|------------------|-----------------------------------------------|
+| Frontend         | React 19, TypeScript, Vite, Tailwind CSS      |
+| Backend          | FastAPI, SQLModel, async Python               |
+| Vector DB        | Qdrant (cosine, 768-dim)                       |
+| Cache / Queue    | Redis + Celery                                 |
+| LLM              | Ollama — `phi` + `nomic-embed-text`           |
+| Containerization | Docker Compose                                 |
 
 ---
 
 ## 📝 License
 
-MIT License - See LICENSE file
+**Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0).**
+
+You may look at, study, share, and build upon this project — but **not for
+commercial purposes** without explicit written permission. See [LICENSE](LICENSE)
+for the full terms. Third-party dependencies retain their own licenses.
 
 ---
 
-## 👨‍💻 Author
-
-Built as a full-stack AI engineering project demonstrating RAG, agentic AI, LLM orchestration, async distributed systems, and modern web development.
-
-**Key Technologies Demonstrated:**
-- LLM prompt engineering & evaluation
-- Vector databases & semantic search
-- Async Python & distributed task processing
-- Real-time web interfaces
-- Containerized microservices
-- Multi-agent reasoning loops
-
----
-
-## 🔗 Links
-
-- **API Docs**: http://localhost:8001/docs (Swagger)
-- **Vector DB**: http://localhost:6333 (Qdrant dashboard)
-- **Frontend**: http://localhost:5176
-
----
-
-**Questions?** Open an issue or check the code comments for implementation details.
+⚖️ *The defendant has stated their case. The floor is yours, counselor.*

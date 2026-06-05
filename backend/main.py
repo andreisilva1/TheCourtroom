@@ -194,10 +194,10 @@ async def ace_attorney_start(
         # Create debate with fallacious theme as opening
         debate = await debate_service.add(
             debate_id=None,
-            attacker_id=request.persona_id,
-            defender_id="user",
+            persona_id=request.persona_id,
+            challenger_id="user",
             topic=fallacy["theme"],
-            attacker_message={
+            persona_message={
                 "role": "opening",
                 "message": fallacy["theme"],
             },
@@ -246,7 +246,7 @@ async def ace_attorney_argue(
             return {"error": "Debate not found"}
 
         # Fetch persona
-        persona = await persona_service.get_by_id(str(debate.attacker_id))
+        persona = await persona_service.get_by_id(str(debate.persona_id))
         if not persona:
             return {"error": "Persona not found"}
 
@@ -269,17 +269,17 @@ async def ace_attorney_argue(
         )
 
         # Get persona traits for personalized response
-        traits = await debate_service.get_traits(str(debate.attacker_id))
+        traits = await debate_service.get_traits(str(debate.persona_id))
         if not traits:
             # If no traits cached, run quiz
             traits = run_personality_quiz(persona.name)
-            await debate_service.save_traits(str(debate.attacker_id), traits)
+            await debate_service.save_traits(str(debate.persona_id), traits)
 
         # Generate persona's response using RAG + personality
         persona_response = generate_persona_response_to_user(
             persona_name=persona.name,
-            persona_id=str(debate.attacker_id),
-            personality_scores=traits,
+            persona_id=str(debate.persona_id),
+            traits=traits,
             fallacy_theme=debate.fallacy_theme or debate.topic,
             user_argument=request.user_argument,
         )
@@ -287,7 +287,7 @@ async def ace_attorney_argue(
         # Save messages
         messages.append(
             {
-                "persona_id": str(debate.attacker_id),
+                "persona_id": str(debate.persona_id),
                 "is_user_message": False,
                 "role": "response",
                 "message": persona_response,

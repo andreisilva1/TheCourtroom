@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -14,6 +15,12 @@ class PersonaService:
     async def get_all(self) -> list[Persona]:
         result = await self.session.execute(select(Persona))
         return result.scalars().all()
+
+    async def get_by_id(self, persona_id: str) -> Optional[Persona]:
+        result = await self.session.execute(
+            select(Persona).where(Persona.id == UUID(persona_id))
+        )
+        return result.scalar_one_or_none()
 
     async def add(
         self,

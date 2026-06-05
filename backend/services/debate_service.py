@@ -14,40 +14,40 @@ class DebateService:
     async def add(
         self,
         debate_id: str | None,
-        attacker_id: str,
-        defender_id: str | None,
+        persona_id: str,
+        challenger_id: str | None,
         topic: str,
-        attacker_message: dict | None = None,
-        defender_message: dict | None = None,
+        persona_message: dict | None = None,
+        challenger_message: dict | None = None,
     ) -> Debate:
         """
         Add or update a debate.
         If debate_id is None, creates a new debate.
         If debate_id exists, appends messages to existing debate.
 
-        attacker_message: {"role": "attacker", "message": "..."}
-        defender_message: {"role": "defender", "message": "..."}
+        persona_message: {"role": "opening", "message": "..."}
+        challenger_message: {"role": "argument", "message": "..."}
         """
 
         if debate_id is None:
             # Create new debate
             messages = []
-            if attacker_message:
+            if persona_message:
                 messages.append({
-                    "persona_id": attacker_id,
-                    "role": attacker_message.get("role"),
-                    "message": attacker_message.get("message"),
+                    "persona_id": persona_id,
+                    "role": persona_message.get("role"),
+                    "message": persona_message.get("message"),
                 })
-            if defender_message:
+            if challenger_message:
                 messages.append({
-                    "persona_id": defender_id,
-                    "role": defender_message.get("role"),
-                    "message": defender_message.get("message"),
+                    "persona_id": challenger_id,
+                    "role": challenger_message.get("role"),
+                    "message": challenger_message.get("message"),
                 })
 
             debate = Debate(
-                attacker_id=UUID(attacker_id),
-                defender_id=UUID(defender_id) if defender_id else None,
+                persona_id=persona_id,
+                challenger_id=challenger_id,
                 topic=topic,
                 messages=json.dumps(messages),
             )
@@ -70,17 +70,17 @@ class DebateService:
             messages = json.loads(debate.messages)
 
             # Append new messages
-            if attacker_message:
+            if persona_message:
                 messages.append({
-                    "persona_id": attacker_id,
-                    "role": attacker_message.get("role"),
-                    "message": attacker_message.get("message"),
+                    "persona_id": persona_id,
+                    "role": persona_message.get("role"),
+                    "message": persona_message.get("message"),
                 })
-            if defender_message:
+            if challenger_message:
                 messages.append({
-                    "persona_id": defender_id,
-                    "role": defender_message.get("role"),
-                    "message": defender_message.get("message"),
+                    "persona_id": challenger_id,
+                    "role": challenger_message.get("role"),
+                    "message": challenger_message.get("message"),
                 })
 
             # Update debate
@@ -130,9 +130,9 @@ class DebateService:
 
         return json.loads(persona.traits)
 
-    def get_opponent_last_message(self, messages: list, opponent_persona_id: str) -> str | None:
-        """Extract the last message from opponent in the debate history."""
+    def get_last_message_by(self, messages: list, persona_id: str) -> str | None:
+        """Extract the last message authored by the given participant id."""
         for msg in reversed(messages):
-            if msg.get("persona_id") == opponent_persona_id:
+            if msg.get("persona_id") == persona_id:
                 return msg.get("message")
         return None

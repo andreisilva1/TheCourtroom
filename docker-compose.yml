@@ -1,3 +1,5 @@
+name: the-courtroom
+
 services:
   frontend:
     build: ./frontend

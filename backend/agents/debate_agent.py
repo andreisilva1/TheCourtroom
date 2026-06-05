@@ -60,7 +60,7 @@ where each number is 1-10 for each question."""
 def generate_persona_response_to_user(
     persona_name: str,
     persona_id: str,
-    personality_scores: dict[str, float],
+    traits: dict[str, float],
     fallacy_theme: str,
     user_argument: str,
 ) -> str:
@@ -69,7 +69,7 @@ def generate_persona_response_to_user(
     # Get relevant context from persona's knowledge base
     context_chunks = get_persona_embeddings(
         persona_id,
-        personality_scores,
+        traits,
         fallacy_theme,
         limit=3,
     )
@@ -77,7 +77,7 @@ def generate_persona_response_to_user(
     # Build personalized prompt based on traits
     prompt = build_persona_response_prompt(
         persona_name,
-        personality_scores,
+        traits,
         context_chunks,
         fallacy_theme,
         user_argument,

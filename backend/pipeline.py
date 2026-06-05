@@ -5,7 +5,7 @@ from fastapi import HTTPException
 import requests
 import wikipediaapi
 
-wiki = wikipediaapi.Wikipedia(user_agent="ArgumentAI", language="en")
+wiki = wikipediaapi.Wikipedia(user_agent="TheCourtroom/1.0", language="en")
 
 
 def show_possible_options_of_personas_based_on_a_commom_name_or_description(
@@ -13,7 +13,7 @@ def show_possible_options_of_personas_based_on_a_commom_name_or_description(
 ):
     response = requests.get(
         f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={persona_name}&format=json",
-        headers={"User-Agent": "PersonaBattle/1.0"},
+        headers={"User-Agent": "TheCourtroom/1.0"},
     )
 
     data = json.loads(response.text)
@@ -41,7 +41,7 @@ def show_possible_options_of_personas_based_on_a_commom_name_or_description(
 def wikipedia_resolver(persona_name: str) -> dict:
     page = requests.get(
         f"https://en.wikipedia.org/wiki/{persona_name}",
-        headers={"User-agent": "ArgumentAI"},
+        headers={"User-agent": "TheCourtroom/1.0"},
     ).text
 
     references = []

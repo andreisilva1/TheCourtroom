@@ -43,3 +43,6 @@ Thumbs.db
 
 # Qdrant local data (if running outside Docker)
 qdrant_storage/
+
+# Local dev helpers (not part of the app)
+test_flow.sh
