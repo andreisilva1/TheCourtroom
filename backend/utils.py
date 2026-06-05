@@ -6,7 +6,7 @@ from uuid import uuid4
 import ollama
 import requests
 from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct
+from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
 
 
 QDRANT_COLLECTION = "persona_chunks"
@@ -131,21 +131,19 @@ def search_persona_context(
 ) -> list[str]:
     query_vector = embed_text(query)
 
-    results = qdrant.search(
+    results = qdrant.query_points(
         collection_name=QDRANT_COLLECTION,
-        query_vector=query_vector,
-        query_filter={
-            "must": [
-                {
-                    "key": "persona_id",
-                    "match": {
-                        "value": persona_id,
-                    },
-                }
+        query=query_vector,
+        query_filter=Filter(
+            must=[
+                FieldCondition(
+                    key="persona_id",
+                    match=MatchValue(value=persona_id),
+                )
             ]
-        },
+        ),
         limit=limit,
-    )
+    ).points
 
     return [
         item.payload["text"]

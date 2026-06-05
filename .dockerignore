@@ -1,0 +1,29 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Databases (recreated at runtime)
+*.db
+*.sqlite
+*.sqlite3
+
+# Frontend (built by its own image; not needed in the backend context)
+frontend/
+
+# Git / IDE / env / docs
+.git/
+.gitignore
+.idea/
+.vscode/
+.env
+.env.*
+*.md
+design-mock.html
+.claude/

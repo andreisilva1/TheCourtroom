@@ -182,7 +182,9 @@ export default function AceAttorneyArena() {
           </div>
         </div>
         <div className="absolute bottom-10 z-[2] text-center w-full">
-          <p className="italic text-[#cbb990] mb-2.5">Preparing the trial…</p>
+          <p className="italic text-[#cbb990] mb-2.5">
+            {(persona?.name || 'The defendant')} is preparing the charge…
+          </p>
           <div>
             <span className="bounce-dot inline-block w-2.5 h-2.5 rounded-full bg-court-red-bright mx-1" />
             <span className="bounce-dot inline-block w-2.5 h-2.5 rounded-full bg-court-red-bright mx-1" />

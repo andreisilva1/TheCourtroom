@@ -72,7 +72,7 @@
 @keyframes vsPop { from { transform: scale(0) rotate(-20deg); opacity: 0; } to { transform: scale(1) rotate(-8deg); opacity: 1; } }
 @keyframes vsThrob { 0%,100% { transform: scale(1) rotate(-8deg); } 50% { transform: scale(1.08) rotate(-8deg); } }
 
-.vs-flash { animation: flash .6s ease-out; }
+.vs-flash { animation: flash .6s ease-out forwards; }
 @keyframes flash { from { opacity: .9; } to { opacity: 0; } }
 
 /* ───── bounce dots ───── */
