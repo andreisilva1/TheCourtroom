@@ -25,7 +25,7 @@ qdrant = QdrantClient(host="qdrant", port=6333)
 
 # Models required from the host's Ollama. Pulled automatically on startup so the
 # user only needs Ollama installed — no manual `ollama pull`.
-REQUIRED_MODELS = ["phi", "nomic-embed-text"]
+REQUIRED_MODELS = ["mistral", "nomic-embed-text"]
 _models_ready = False
 
 
@@ -172,6 +172,11 @@ class AceAttorneyArgueRequest(BaseModel):
     debate_id: str
     user_argument: str
 
+    def validate_length(self) -> str | None:
+        if len(self.user_argument) > 500:
+            return "Argument too long — keep it under 500 characters."
+        return None
+
 
 class AceAttorneyObjectionRequest(BaseModel):
     debate_id: str
@@ -205,7 +210,7 @@ async def ace_attorney_start(
         # Generate personalized fallacy based on persona traits
         print(f"Generating personalized fallacy for {persona.name}")
         try:
-            fallacy = generate_fallacy_for_persona(persona.name, traits)
+            fallacy = generate_fallacy_for_persona(persona.name, traits, voice=persona.voice)
             print(f"Generated fallacy type: {fallacy['type']}")
         except Exception as e:
             # If LLM is not ready, return error
@@ -240,7 +245,7 @@ async def ace_attorney_start(
             "persona_id": request.persona_id,
             "theme": fallacy["theme"],
             "fallacy_type": fallacy["type"],
-            "opening": f"I believe: {fallacy['theme']}",
+            "opening": fallacy["theme"],
         }
 
     except Exception as e:
@@ -264,6 +269,9 @@ async def ace_attorney_argue(
     """
     try:
         import json
+
+        if err := request.validate_length():
+            return {"error": err}
 
         # Fetch debate
         debate = await debate_service.get_by_id(request.debate_id)
@@ -307,6 +315,7 @@ async def ace_attorney_argue(
             traits=traits,
             fallacy_theme=debate.fallacy_theme or debate.topic,
             user_argument=request.user_argument,
+            voice=persona.voice,
         )
 
         # Save messages

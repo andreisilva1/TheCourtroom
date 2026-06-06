@@ -221,15 +221,12 @@ def build_persona_response_prompt(
     context_chunks: list[str],
     fallacy_theme: str,
     user_argument: str,
+    voice: str | None = None,
 ) -> str:
-    """Build prompt for persona to defend their fallacious position with personality and context."""
-
-    # Determine personality traits
     rational_score = traits.get("rational", 0.5)
     aggressive_score = traits.get("aggressive", 0.5)
     optimistic_score = traits.get("optimistic", 0.5)
 
-    # Build persona style
     style = []
     if rational_score > 0.6:
         style.append("cite facts and logic")
@@ -240,20 +237,22 @@ def build_persona_response_prompt(
 
     style_str = ", ".join(style) if style else "be balanced"
     context_str = " ".join(chunk[:100] for chunk in context_chunks[:2]) if context_chunks else ""
+    voice_line = f"\nSpeak exactly like this: {voice}" if voice else ""
 
-    prompt = f"""You are {persona_name}. A user is challenging your position on: "{fallacy_theme}"
+    prompt = f"""Write a debate response from {persona_name}'s perspective.{voice_line}
 
-User's argument: {user_argument}
+Context about {persona_name}: {context_str}
 
-Context about you: {context_str}
+The debate topic is: "{fallacy_theme}"
+The user just argued: "{user_argument}"
 
-Your goal is to DEFEND your original position. You should:
-- Stay committed to your position
-- Acknowledge their point but explain why you disagree
+Rules:
+- First person only (I, me, my) — do not use the name "{persona_name}" in the response
 - {style_str}
-- Use specific examples or reasoning to support your view
-- Keep it concise (2-3 sentences)
+- Acknowledge their point but firmly defend the original position
+- 2-3 sentences, under 500 characters
 
-Respond as {persona_name}, speaking in first person:"""
+Respond with ONLY a JSON object in this exact format (no other text):
+{{"response": "<the reply here>"}}"""
 
     return prompt

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from langchain_ollama import OllamaLLM
 from backend.utils import (
     PERSONALITY_QUESTIONS,
@@ -8,7 +9,7 @@ from backend.utils import (
 )
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-llm = OllamaLLM(model="phi", base_url=OLLAMA_HOST)
+llm = OllamaLLM(model="mistral", base_url=OLLAMA_HOST)
 
 
 def run_personality_quiz(persona_name: str) -> dict:
@@ -65,10 +66,8 @@ def generate_persona_response_to_user(
     traits: dict[str, float],
     fallacy_theme: str,
     user_argument: str,
+    voice: str | None = None,
 ) -> str:
-    """Generate persona's response using RAG (embeddings) + personality traits."""
-
-    # Get relevant context from persona's knowledge base
     context_chunks = get_persona_embeddings(
         persona_id,
         traits,
@@ -76,19 +75,25 @@ def generate_persona_response_to_user(
         limit=3,
     )
 
-    # Build personalized prompt based on traits
     prompt = build_persona_response_prompt(
         persona_name,
         traits,
         context_chunks,
         fallacy_theme,
         user_argument,
+        voice=voice,
     )
 
-    # Generate response
-    response = llm.invoke(prompt).strip()
+    raw = llm.invoke(prompt).strip()
 
-    if not response:
+    if not raw:
         return f"I maintain my position on {fallacy_theme}."
 
-    return response
+    try:
+        match = re.search(r'\{.*?\}', raw, re.DOTALL)
+        if match:
+            return json.loads(match.group()).get("response", raw).strip()
+    except (json.JSONDecodeError, AttributeError):
+        pass
+
+    return raw

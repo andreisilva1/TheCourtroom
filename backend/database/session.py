@@ -15,6 +15,14 @@ _SessionFactory = async_sessionmaker(engine, expire_on_commit=False)
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        # Non-destructive migrations for columns added after initial schema
+        for stmt in (
+            "ALTER TABLE persona ADD COLUMN voice TEXT",
+        ):
+            try:
+                await conn.execute(__import__("sqlalchemy").text(stmt))
+            except Exception:
+                pass  # column already exists
 
 
 async def get_session():

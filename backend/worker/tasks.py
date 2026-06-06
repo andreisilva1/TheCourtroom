@@ -1,6 +1,7 @@
 import os
 from uuid import UUID
 
+from langchain_ollama import OllamaLLM
 from sqlalchemy import create_engine
 from sqlmodel import Session
 
@@ -16,6 +17,11 @@ from backend.utils import (
     get_wiki_image,
 )
 from backend.worker.celery import celery_app
+
+_llm = OllamaLLM(
+    model="mistral",
+    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+)
 
 
 def get_sync_engine():
@@ -62,7 +68,8 @@ def build_persona(persona_id: str, persona_name: str):
             )
             sources_indexed.append(source_type)
 
-        mark_persona_loaded(persona_id)
+        voice = _generate_voice(persona_name)
+        mark_persona_loaded(persona_id, voice=voice)
 
         return {
             "persona_id": persona_id,
@@ -73,6 +80,24 @@ def build_persona(persona_id: str, persona_name: str):
     except Exception as exc:
         mark_persona_failed(persona_id, str(exc))
         raise
+
+
+def _generate_voice(persona_name: str) -> str | None:
+    prompt = (
+        f"Describe {persona_name}'s speaking style in ONE sentence. "
+        "Cover: personality, temperament, vocabulary or slang, cultural/regional background if notable, and their role or field. "
+        "Reply with only the sentence — no preamble, no quotes.\n"
+        'Example: "A visionary Serbian-American inventor who speaks with formal precision and intense passion, '
+        'blending scientific terminology with poetic declarations about electricity and the future."'
+    )
+    try:
+        result = _llm.invoke(prompt).strip()
+        # keep it to one sentence and a sane length
+        sentence = result.split("\n")[0].strip()
+        return sentence[:300] if sentence else None
+    except Exception as exc:
+        print(f"[voice] failed to generate voice for {persona_name}: {exc}")
+        return None
 
 
 def update_persona_image(persona_id: str, image_bytes: bytes):
@@ -87,7 +112,7 @@ def update_persona_image(persona_id: str, image_bytes: bytes):
         session.commit()
 
 
-def mark_persona_loaded(persona_id: str):
+def mark_persona_loaded(persona_id: str, voice: str | None = None):
     with Session(engine) as session:
         persona = session.get(Persona, UUID(persona_id))
 
@@ -97,6 +122,8 @@ def mark_persona_loaded(persona_id: str):
         persona.loaded = True
         persona.failed = False
         persona.error_message = None
+        if voice:
+            persona.voice = voice
 
         session.add(persona)
         session.commit()

@@ -12,6 +12,7 @@ class Persona(SQLModel, table=True):
     failed: bool = Field(default=False)
     error_message: Optional[str] = Field(default=None, nullable=True)
     traits: Optional[str] = Field(default=None, nullable=True)
+    voice: Optional[str] = Field(default=None, nullable=True)
 
 
 class Debate(SQLModel, table=True):

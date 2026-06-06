@@ -22,6 +22,16 @@ interface Verdict {
 const MAX_ARGUMENTS = 10
 const MIN_ARGUMENTS_TO_OBJECT = 3
 
+function playSound(src: string) {
+  try {
+    const audio = new Audio(src)
+    audio.volume = 0.5
+    audio.play().catch(() => {}) // ignore autoplay blocks
+  } catch {
+    /* ignore */
+  }
+}
+
 export default function AceAttorneyArena() {
   const { persona_id } = useParams<{ persona_id: string }>()
   const navigate = useNavigate()
@@ -73,6 +83,9 @@ export default function AceAttorneyArena() {
   }, [persona_id])
 
   useEffect(() => { initDebate() }, [initDebate])
+
+  // VS fight sting, once, when the trial screen opens.
+  useEffect(() => { playSound('/fight-sound-effect.mp3') }, [])
 
   useEffect(() => {
     if (messagesRef.current) {
@@ -128,6 +141,7 @@ export default function AceAttorneyArena() {
 
   const runObjection = async () => {
     if (!debateId) return
+    playSound('/objection-sound-effect.mp3')
     setPhase('evaluating')
     try {
       const data = await objection(debateId, userArguments())
@@ -151,9 +165,18 @@ export default function AceAttorneyArena() {
 
   // ── Error ──
   if (error) {
+    const canRetry = debateId === null
     return (
-      <div className="min-h-screen courtroom-bg flex flex-col items-center justify-center gap-4">
-        <p className="relative z-[1] text-court-red-bright italic text-lg">{error}</p>
+      <div className="min-h-screen courtroom-bg flex flex-col items-center justify-center gap-5">
+        <p className="relative z-[1] text-court-red-bright italic text-lg text-center max-w-md px-6">{error}</p>
+        {canRetry && (
+          <button
+            onClick={() => { setError(''); setPhase('intro'); initDebate() }}
+            className="relative z-[1] font-title font-semibold tracking-wide uppercase text-sm text-ink bg-gold px-7 py-3 rounded-md shadow-[0_4px_0_#9a751f] active:translate-y-1 active:shadow-none transition-all"
+          >
+            ↺ Generate new theme
+          </button>
+        )}
         <button onClick={() => navigate('/')} className="relative z-[1] font-mono text-sm text-gold-bright hover:underline">
           ← back to the courtroom
         </button>
@@ -312,14 +335,15 @@ export default function AceAttorneyArena() {
 
       {/* Input */}
       <div className="relative z-[1] max-w-[900px] w-full mx-auto px-6 pt-4 pb-7">
-        <div className="flex gap-2.5 mb-3">
+        <div className="flex gap-2.5 mb-1">
           <input
             type="text"
             value={userInput}
-            onChange={e => setUserInput(e.target.value)}
+            onChange={e => setUserInput(e.target.value.slice(0, 500))}
             onKeyDown={e => e.key === 'Enter' && !responding && handleSubmit()}
             placeholder="Present your argument, counselor..."
             disabled={responding}
+            maxLength={500}
             className="flex-1 bg-black/50 border-2 border-court-blue text-parchment placeholder:text-[#8a7a5e] rounded-md px-4 py-3 text-base focus:outline-none focus:border-court-blue-bright font-serif"
           />
           <button
@@ -329,6 +353,9 @@ export default function AceAttorneyArena() {
           >
             {responding ? '…' : 'Submit'}
           </button>
+        </div>
+        <div className={`text-right font-mono text-[11px] mb-2.5 ${userInput.length >= 480 ? 'text-court-red-bright' : 'text-[#8a7a5e]'}`}>
+          {userInput.length}/500
         </div>
         {canObject && (
           <button

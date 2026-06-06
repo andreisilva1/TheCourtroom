@@ -6,7 +6,7 @@ Determine if user has sufficiently refuted the fallacious argument.
 import os
 from langchain_ollama import OllamaLLM
 
-llm = OllamaLLM(model="phi", base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"))
+llm = OllamaLLM(model="mistral", base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"))
 
 
 def evaluate_objection(
