@@ -49,6 +49,18 @@ export interface ArgueResponse {
   error?: string
 }
 
+export interface DebateHistoryEntry {
+  debate_id: string
+  persona_id: string
+  persona_name: string
+  persona_image?: string | null
+  fallacy_theme: string
+  fallacy_type?: string
+  status?: string
+  user_message_count: number
+  example_refutation?: string | null
+}
+
 export interface ObjectionResponse {
   debate_id?: string
   won?: boolean

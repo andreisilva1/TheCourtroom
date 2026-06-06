@@ -90,6 +90,12 @@ class DebateService:
             await self.session.refresh(debate)
             return debate
 
+    async def get_all(self) -> list[Debate]:
+        result = await self.session.execute(
+            select(Debate).order_by(Debate.id.desc())
+        )
+        return list(result.scalars().all())
+
     async def get_by_id(self, debate_id: str) -> Debate | None:
         """Fetch debate by ID."""
         result = await self.session.execute(

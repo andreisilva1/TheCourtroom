@@ -427,17 +427,25 @@ async def ace_attorney_objection(
 @app.get("/debates/history")
 async def get_debates_history(
     debate_service: DebateServiceDep,
+    persona_service: PersonaServiceDep,
 ):
-    """
-    Get history of all debates for this session.
-    Returns summary of each debate with status and results.
-    """
     try:
-        # This would need a query to get all debates
-        # For now, returning empty list
-        # TODO: Implement full debate history retrieval
-        return {"debates": []}
-
+        debates = await debate_service.get_all()
+        result = []
+        for d in debates:
+            persona = await persona_service.get_by_id(str(d.persona_id))
+            result.append({
+                "debate_id": str(d.id),
+                "persona_id": str(d.persona_id),
+                "persona_name": persona.name if persona else "Unknown",
+                "persona_image": base64.b64encode(persona.image).decode() if persona and persona.image else None,
+                "fallacy_theme": d.fallacy_theme or d.topic,
+                "fallacy_type": d.fallacy_type,
+                "status": d.status,
+                "user_message_count": d.user_message_count,
+                "example_refutation": d.fallacy_example_refutation,
+            })
+        return {"debates": result}
     except Exception as e:
         print(f"Get debates history error: {e}")
         return {"error": f"Failed to retrieve debate history: {str(e)}"}
