@@ -5,6 +5,22 @@ export interface Persona {
   image_url?: string | null
   loaded?: boolean
   color?: string
+  active_debate_id?: string | null
+}
+
+export interface DebateDetails {
+  debate_id: string
+  status?: string
+  topic: string
+  fallacy_theme?: string
+  messages: Array<{
+    persona_id: string
+    role: string
+    message: string
+    is_user_message?: boolean
+  }>
+  user_message_count: number
+  example_refutation?: string | null
 }
 
 export interface PersonaOption {

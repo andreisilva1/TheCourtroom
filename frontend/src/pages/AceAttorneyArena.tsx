@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { loadPersonas, startDebate, argue, objection } from '../api/client'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { loadPersonas, startDebate, argue, objection, loadDebateDetails } from '../api/client'
 import PersonaAvatar from '../components/PersonaAvatar'
 import type { Persona } from '../types'
 
@@ -34,6 +34,7 @@ function playSound(src: string) {
 
 export default function AceAttorneyArena() {
   const { persona_id } = useParams<{ persona_id: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
   const [persona, setPersona] = useState<Persona | null>(null)
@@ -49,6 +50,34 @@ export default function AceAttorneyArena() {
   const [error, setError] = useState('')
 
   const messagesRef = useRef<HTMLDivElement>(null)
+
+  const resumeDebate = useCallback(async (existingDebateId: string) => {
+    if (!persona_id) return
+    try {
+      const [all, details] = await Promise.all([
+        loadPersonas(),
+        loadDebateDetails(existingDebateId),
+      ])
+      const found = all.find(p => p.id === persona_id) ?? null
+      setPersona(found)
+
+      const personaName = found?.name || 'Defendant'
+      setDebateId(existingDebateId)
+      setTheme(details.fallacy_theme || details.topic)
+      setArgumentCount(details.user_message_count)
+      setMessages(
+        details.messages.map(m => ({
+          speaker: m.is_user_message ? 'user' : 'persona',
+          name: m.is_user_message ? 'You' : personaName,
+          message: m.message,
+        }))
+      )
+      setPhase('active')
+    } catch (err) {
+      console.error('Failed to resume debate', err)
+      setError('Failed to resume the trial. Please go back and try again.')
+    }
+  }, [persona_id])
 
   const initDebate = useCallback(async () => {
     if (!persona_id) return
@@ -82,7 +111,11 @@ export default function AceAttorneyArena() {
     }
   }, [persona_id])
 
-  useEffect(() => { initDebate() }, [initDebate])
+  useEffect(() => {
+    const existing = searchParams.get('debate_id')
+    if (existing) resumeDebate(existing)
+    else initDebate()
+  }, [searchParams, resumeDebate, initDebate])
 
   // VS fight sting, once, when the trial screen opens.
   useEffect(() => { playSound('/fight-sound-effect.mp3') }, [])
@@ -336,6 +369,15 @@ export default function AceAttorneyArena() {
       {/* Input */}
       <div className="relative z-[1] max-w-[900px] w-full mx-auto px-6 pt-4 pb-7">
         <div className="flex gap-2.5 mb-1">
+          {canObject && (
+            <button
+              onClick={runObjection}
+              disabled={responding}
+              className="objection-shake font-title font-bold italic text-[18px] tracking-[2px] uppercase text-white border-[3px] border-white px-4 rounded-md bg-gradient-to-b from-court-red-bright to-court-red shadow-[0_4px_0_#7a0f1c,0_6px_16px_rgba(192,24,42,.5)] active:translate-y-1 active:shadow-[0_1px_0_#7a0f1c] disabled:opacity-50 transition-transform whitespace-nowrap"
+            >
+              OBJECTION!
+            </button>
+          )}
           <input
             type="text"
             value={userInput}
@@ -357,15 +399,6 @@ export default function AceAttorneyArena() {
         <div className={`text-right font-mono text-[11px] mb-2.5 ${userInput.length >= 480 ? 'text-court-red-bright' : 'text-[#8a7a5e]'}`}>
           {userInput.length}/500
         </div>
-        {canObject && (
-          <button
-            onClick={runObjection}
-            disabled={responding}
-            className="objection-shake w-full font-title font-bold italic text-[28px] tracking-[3px] uppercase text-white border-[3px] border-white py-3.5 rounded-lg bg-gradient-to-b from-court-red-bright to-court-red shadow-[0_5px_0_#7a0f1c,0_8px_20px_rgba(192,24,42,.5)] active:translate-y-1 active:shadow-[0_1px_0_#7a0f1c] disabled:opacity-50 transition-transform"
-          >
-            OBJECTION! ({argumentCount}/{MAX_ARGUMENTS})
-          </button>
-        )}
       </div>
     </div>
   )

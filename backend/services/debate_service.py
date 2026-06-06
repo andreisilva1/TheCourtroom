@@ -90,6 +90,15 @@ class DebateService:
             await self.session.refresh(debate)
             return debate
 
+    async def get_active_for_persona(self, persona_id: str) -> Debate | None:
+        result = await self.session.execute(
+            select(Debate)
+            .where(Debate.persona_id == persona_id, Debate.status == "active")
+            .order_by(Debate.id.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def get_all(self) -> list[Debate]:
         result = await self.session.execute(
             select(Debate).order_by(Debate.id.desc())

@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type {
   Persona, CreatePersonaResponse, TaskStatus,
-  StartDebateResponse, ArgueResponse, ObjectionResponse, DebateHistoryEntry,
+  StartDebateResponse, ArgueResponse, ObjectionResponse, DebateHistoryEntry, DebateDetails,
 } from '../types'
 
 // API port is baked at build time (VITE_API_PORT, from docker-compose / .env),
@@ -67,4 +67,9 @@ export async function objection(debateId: string, userArguments: string[]): Prom
 export async function loadHistory(): Promise<DebateHistoryEntry[]> {
   const { data } = await api.get<{ debates: DebateHistoryEntry[] }>('/debates/history')
   return Array.isArray(data?.debates) ? data.debates : []
+}
+
+export async function loadDebateDetails(debateId: string): Promise<DebateDetails> {
+  const { data } = await api.get<DebateDetails>(`/debates/${debateId}/details`)
+  return data
 }

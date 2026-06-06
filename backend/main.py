@@ -126,18 +126,19 @@ async def health_check():
 
 
 @app.get("/load_personas")
-async def load_personas(service: PersonaServiceDep):
+async def load_personas(service: PersonaServiceDep, debate_service: DebateServiceDep):
     personas = await service.get_all()
-
-    return [
-        {
+    result = []
+    for p in personas:
+        active = await debate_service.get_active_for_persona(str(p.id))
+        result.append({
             "id": str(p.id),
             "name": p.name,
             "image": base64.b64encode(p.image).decode() if p.image else None,
             "loaded": p.loaded,
-        }
-        for p in personas
-    ]
+            "active_debate_id": str(active.id) if active else None,
+        })
+    return result
 
 
 @app.get("/task/{task_id}")
