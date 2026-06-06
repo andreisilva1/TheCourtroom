@@ -11,6 +11,20 @@ and dynamically generated personas built from multiple online sources.
 
 ---
 
+![The Courtroom — defendants grid](any_persona.png)
+
+Anyone with a Wikipedia page is fair game — and we mean *anyone*.
+**Sigmund Freud** will tell you your argument proves you have mommy issues.
+**Sun Tzu** will have already won before you finish your opening sentence.
+**SpongeBob SquarePants** will passionately defend the economic superiority of Bikini Bottom.
+**Sherlock Holmes** will deduce that your refutation is logically unsound before you hit Enter.
+**The Internet** will claim credit for inventing everything, including itself.
+**Pizza** will die on the hill that pineapple is a war crime against humanity.
+**The Moon** is genuinely tired of being visited uninvited since 1969.
+**A Chair** has strong opinions about posture, and they are non-negotiable.
+
+---
+
 ## 🎯 The core loop
 
 1. **Summon a defendant** — type a name, and a persona is built from multiple
@@ -49,7 +63,7 @@ and dynamically generated personas built from multiple online sources.
                │                                  │
         ┌──────▼──────────────────────────────────▼─────┐
         │     Ollama (on the host — your machine)        │
-        │  ├─ phi              (debate + jury reasoning) │
+        │  ├─ mistral              (debate + jury reasoning) │
         │  └─ nomic-embed-text (768-dim embeddings)     │
         └───────────────────────────────────────────────┘
 ```
@@ -69,7 +83,7 @@ ollama serve
 ```
 
 That's it — you do **not** need to pull any models manually. On first boot the
-backend pulls `phi` and `nomic-embed-text` into your Ollama automatically.
+backend pulls `mistral` and `nomic-embed-text` into your Ollama automatically.
 
 ---
 
@@ -87,7 +101,7 @@ docker compose up -d
 # Qdrant   → http://localhost:6333
 ```
 
-On first boot the backend pulls `phi` (~1.6 GB) and `nomic-embed-text` into your
+On first boot the backend pulls `mistral` (~4 GB) and `nomic-embed-text` into your
 host Ollama **automatically, in the background**. The frontend polls `/health`
 and keeps defendants locked (dimmed) until the models finish downloading — watch
 progress with:
@@ -125,7 +139,7 @@ with `OLLAMA_HOST` in a `.env` if yours runs elsewhere.
 1. `get_persona_embeddings` queries Qdrant using the persona's dominant **traits**
    + the fallacy theme
 2. `build_persona_response_prompt` fuses retrieved context + traits + your argument
-3. `phi` generates an in-character defense
+3. `mistral` generates an in-character defense
 
 The personality system (a 14-question quiz → trait scores `0.0–1.0`) is what
 makes each persona argue differently — that difference is now aimed **at you**.
@@ -198,7 +212,7 @@ the-courtroom/
 | Backend          | FastAPI, SQLModel, async Python               |
 | Vector DB        | Qdrant (cosine, 768-dim)                       |
 | Cache / Queue    | Redis + Celery                                 |
-| LLM              | Ollama (host) — `phi` + `nomic-embed-text`    |
+| LLM              | Ollama (host) — `mistral` + `nomic-embed-text`    |
 | Containerization | Docker Compose                                 |
 
 ---

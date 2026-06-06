@@ -1,9 +1,6 @@
-"""
-Evaluate user's objection against a fallacy.
-Determine if user has sufficiently refuted the fallacious argument.
-"""
-
+import json
 import os
+
 from langchain_ollama import OllamaLLM
 
 llm = OllamaLLM(model="mistral", base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"))
@@ -14,60 +11,44 @@ def evaluate_objection(
     fallacy_hidden_flaw: str,
     user_arguments: list[str],
 ) -> dict:
-    """
-    Evaluate if user's arguments sufficiently refute the fallacy.
+    user_args_text = "\n".join(f"- {arg}" for arg in user_arguments)
 
-    Returns: {
-        "won": bool,
-        "reason": "Why they won/lost",
-        "example_refutation": "A strong refutation (only if lost)"
-    }
-    """
+    prompt = f"""You are a strict debate judge evaluating whether a user has genuinely refuted a fallacious argument.
 
-    user_args_text = "\n".join([f"- {arg}" for arg in user_arguments])
+FALLACY ON TRIAL: "{fallacy_theme}"
+LOGICAL FLAW IN THAT ARGUMENT: {fallacy_hidden_flaw}
 
-    prompt = f"""You are judging a debate where the user must refute a fallacious argument.
-
-FALLACY CLAIMED: {fallacy_theme}
-
-THE FLAW IN THIS ARGUMENT: {fallacy_hidden_flaw}
-
-USER'S ARGUMENTS TO REFUTE IT:
+USER'S ARGUMENTS:
 {user_args_text}
 
-Your task: Determine if the user has successfully refuted the fallacy.
+YOUR STANDARD IS HIGH. The user wins ONLY if they meet ALL of the following:
+1. At least one argument directly addresses the LOGICAL structure of the fallacy — not just disagrees with it.
+2. They provide a concrete reason, evidence, or counter-example that exposes WHY the reasoning is flawed.
+3. The arguments are substantive — coherent sentences with actual content.
 
-To successfully refute, the user should:
-1. Identify or imply the logical flaw
-2. Provide evidence, examples, or reasoning that contradicts the fallacy
-3. Show why the original claim is wrong
+The user AUTOMATICALLY LOSES if their arguments consist only of:
+- Insults, slang, or informal dismissals ("you're lying", "cap", "no way", "bruh", etc.)
+- Bare assertions with no reasoning ("that's wrong", "I disagree", "not true")
+- Off-topic or irrelevant statements
+- Very short phrases with no logical content
+
+Be strict. A clever insult is not a refutation. Repetition of the same weak point does not compound into a strong argument.
 
 Respond ONLY with valid JSON (no other text):
 {{
     "won": true/false,
-    "reason": "Brief explanation of why they won or lost",
-    "example_refutation": "A strong refutation that would have worked (only if won=false, otherwise null)"
-}}
+    "reason": "One sentence explaining the verdict, referencing the actual quality of the arguments",
+    "example_refutation": "A strong refutation that WOULD have worked (required if won=false, null if won=true)"
+}}"""
 
-Example responses:
-- If they won: {{"won": true, "reason": "User correctly identified that technology cannot solve existential problems", "example_refutation": null}}
-- If they lost: {{"won": false, "reason": "Arguments too vague and don't address the core flaw", "example_refutation": "Technology didn't solve: meaning, purpose, human connection, existential dread"}}
-"""
-
-    response = llm.invoke(prompt)
-    response_text = response.strip()
-
-    # Extract JSON
-    import json
+    response = llm.invoke(prompt).strip()
 
     try:
-        start = response_text.find("{")
-        end = response_text.rfind("}") + 1
-        json_str = response_text[start:end]
-        result = json.loads(json_str)
-
+        start = response.find("{")
+        end = response.rfind("}") + 1
+        result = json.loads(response[start:end])
         return {
-            "won": result.get("won", False),
+            "won": bool(result.get("won", False)),
             "reason": result.get("reason", "Unable to evaluate"),
             "example_refutation": result.get("example_refutation"),
         }
@@ -76,5 +57,5 @@ Example responses:
         return {
             "won": False,
             "reason": "Error evaluating objection",
-            "example_refutation": "Unable to generate refutation example",
+            "example_refutation": None,
         }
